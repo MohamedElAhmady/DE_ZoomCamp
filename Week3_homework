@@ -1,0 +1,53 @@
+CREATE OR REPLACE EXTERNAL TABLE `nytaxi.external_green_tripdata`
+OPTIONS (
+  format = 'PARQUET',
+  uris = ['gs://nyc-tl-data-ahmadi/trip data/green_tripdata_2022-*.parquet']
+);
+
+
+SELECT COUNT(*) FROM `nytaxi.external_green_tripdata`;
+
+
+CREATE OR REPLACE TABLE nytaxi.green_tripdata_non_partitoned AS
+SELECT * FROM nytaxi.external_green_tripdata;
+
+SELECT
+  COUNT(DISTINCT PULocationID)
+FROM
+  `nytaxi.external_green_tripdata`;
+
+SELECT
+  COUNT(DISTINCT PULocationID)
+FROM
+  `nytaxi.green_tripdata_non_partitoned`;
+
+SELECT
+  COUNT('fare_amount')
+FROM
+  `nytaxi.green_tripdata_non_partitoned` 
+WHERE fare_amount = 0;
+  
+
+CREATE TABLE `nytaxi.green_tripdata_partitoned_clustered`
+PARTITION BY DATE(lpep_pickup_datetime)
+CLUSTER BY PULocationID AS
+SELECT
+  * 
+FROM
+  `nytaxi.external_green_tripdata`;
+
+
+SELECT DISTINCT PULocationID  FROM `nytaxi.green_tripdata_non_partitoned`
+WHERE DATE(lpep_pickup_datetime) BETWEEN '2022-06-01' AND '2022-06-30';
+
+
+SELECT DISTINCT PULocationID  FROM `nytaxi.green_tripdata_partitoned_clustered`
+WHERE DATE(lpep_pickup_datetime) BETWEEN '2022-06-01' AND '2022-06-30';
+
+-- Question no.8 
+SELECT
+  COUNT(*)
+FROM
+  `nytaxi.green_tripdata_non_partitoned`;
+
+-- The answer is 0 bytes as the number of rows of this table was known in the first step of creating this table and cached by BigQuery as a metadata about this table. So BigQuery can use it to estimate the count without reading the entire table.
